@@ -1,15 +1,44 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { validateEntry } from '../utils/db';
+import { playBeep, unlockAudio } from '../utils/audio';
 
 export default function Scanning() {
   const [result, setResult] = useState(null); // { valid: boolean, reason?: string, scanCountToday?: number, name?: string, validUntil?: string }
   const isProcessing = useRef(false);
-  
+
+  // Set mobile status bar color dynamically
+  const setThemeColor = (color) => {
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', color);
+  };
+
+  useEffect(() => {
+    // Reset to blue/default when scanning
+    if (!result) {
+      setThemeColor('#3b82f6'); // blue
+    } else {
+      setThemeColor(result.valid ? '#16a34a' : '#dc2626'); // green or red
+    }
+    
+    return () => {
+      setThemeColor('#3b82f6'); // Reset on unmount
+    };
+  }, [result]);
+
   const handleScan = async (codes) => {
     if (codes && codes.length > 0 && !result && !isProcessing.current) {
       isProcessing.current = true;
+      
+      // Play beep instantly upon physical scan detection
+      playBeep();
+
       const decodedText = codes[0].rawValue;
       const validation = await validateEntry(decodedText);
       setResult(validation);
@@ -17,8 +46,13 @@ export default function Scanning() {
     }
   };
 
+  const handleScanNext = () => {
+    unlockAudio(); // Keep context unlocked
+    setResult(null);
+  };
+
   return (
-    <div className="relative h-full flex flex-col bg-gray-50">
+    <div className="relative h-full flex flex-col bg-gray-50" onClick={unlockAudio}>
       {!result ? (
         <div className="flex-1 w-full flex flex-col items-center p-4">
           <div className="w-full max-w-md mx-auto bg-black rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden relative">
@@ -39,14 +73,14 @@ export default function Scanning() {
           </div>
         </div>
       ) : (
-        <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-white text-center ${result.valid ? 'bg-green-600' : 'bg-red-600'}`}>
+        <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-white text-center h-[100dvh] w-screen ${result.valid ? 'bg-green-600' : 'bg-red-600'}`}>
           {result.valid ? (
-            <CheckCircle2 size={120} className="mb-4 opacity-90" />
+            <CheckCircle2 size={120} className="mb-4 opacity-90 animate-bounce" />
           ) : (
             <XCircle size={120} className="mb-4 opacity-90" />
           )}
           
-          <h2 className="text-4xl font-extrabold mb-6 uppercase tracking-wider">
+          <h2 className="text-5xl font-extrabold mb-6 uppercase tracking-wider">
             {result.valid ? 'APPROVED' : 'DENIED'}
           </h2>
 
@@ -75,7 +109,7 @@ export default function Scanning() {
           )}
 
           <button 
-            onClick={() => setResult(null)}
+            onClick={handleScanNext}
             className="mt-12 bg-white text-black px-12 py-5 rounded-full font-bold text-xl hover:bg-gray-100 transition shadow-xl w-full max-w-xs"
           >
             Scan Next
