@@ -9,7 +9,6 @@ const firebaseConfig = {
   messagingSenderId: "836114316053",
   appId: "1:836114316053:web:6387403de12a3c49fd871c",
   measurementId: "G-HGYGDMLY70",
-  // Correct database URL for Europe region
   databaseURL: "https://tagscanner-f9c49-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
@@ -71,8 +70,15 @@ export const validateEntry = async (code) => {
 
     const tag = snapshot.val();
     
+    // Default payload to return holder info even on failure
+    const tagInfo = {
+      name: tag.name || 'Unknown',
+      validFrom: tag.validFrom || null,
+      validUntil: tag.validUntil || null
+    };
+
     if (tag.disabled) {
-      return { valid: false, reason: 'Tag has been disabled' };
+      return { valid: false, reason: 'Disabled', ...tagInfo };
     }
 
     const now = new Date();
@@ -80,16 +86,14 @@ export const validateEntry = async (code) => {
     if (tag.validFrom) {
       const from = new Date(tag.validFrom);
       if (now < from) {
-        return { valid: false, reason: 'Not Valid Yet' };
+        return { valid: false, reason: 'Not Valid Yet', ...tagInfo };
       }
     }
     
     if (tag.validUntil) {
       const until = new Date(tag.validUntil);
       if (now > until) {
-        const formattedDate = until.toLocaleDateString();
-        const formattedTime = until.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return { valid: false, reason: `EXPIRED ON: ${formattedDate}, ${formattedTime}` };
+        return { valid: false, reason: 'Expired', ...tagInfo };
       }
     }
 
@@ -109,8 +113,7 @@ export const validateEntry = async (code) => {
     return { 
       valid: true, 
       scanCountToday: newCount,
-      name: tag.name || 'Unknown',
-      validUntil: tag.validUntil || 'Never'
+      ...tagInfo
     };
   } catch (error) {
     console.error('Error validating', error);

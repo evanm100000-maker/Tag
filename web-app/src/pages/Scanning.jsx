@@ -5,10 +5,9 @@ import { validateEntry } from '../utils/db';
 import { playBeep, unlockAudio } from '../utils/audio';
 
 export default function Scanning() {
-  const [result, setResult] = useState(null); // { valid: boolean, reason?: string, scanCountToday?: number, name?: string, validUntil?: string }
+  const [result, setResult] = useState(null); // { valid: boolean, reason?: string, scanCountToday?: number, name?: string, validUntil?: string, validFrom?: string }
   const isProcessing = useRef(false);
 
-  // Set mobile status bar color dynamically
   const setThemeColor = (color) => {
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
@@ -20,10 +19,9 @@ export default function Scanning() {
   };
 
   useEffect(() => {
-    // Reset to blue/default when scanning
     if (!result) {
       setThemeColor('#3b82f6'); // blue
-      document.documentElement.style.backgroundColor = '#f9fafb'; // bg-gray-50
+      document.documentElement.style.backgroundColor = '#f9fafb';
       document.body.style.backgroundColor = '#f9fafb';
     } else {
       const color = result.valid ? '#16a34a' : '#dc2626'; // green or red
@@ -33,7 +31,7 @@ export default function Scanning() {
     }
     
     return () => {
-      setThemeColor('#3b82f6'); // Reset on unmount
+      setThemeColor('#3b82f6');
       document.documentElement.style.backgroundColor = '';
       document.body.style.backgroundColor = '';
     };
@@ -42,10 +40,7 @@ export default function Scanning() {
   const handleScan = async (codes) => {
     if (codes && codes.length > 0 && !result && !isProcessing.current) {
       isProcessing.current = true;
-      
-      // Play beep instantly upon physical scan detection
       playBeep();
-
       const decodedText = codes[0].rawValue;
       const validation = await validateEntry(decodedText);
       setResult(validation);
@@ -54,8 +49,16 @@ export default function Scanning() {
   };
 
   const handleScanNext = () => {
-    unlockAudio(); // Keep context unlocked
+    unlockAudio();
     setResult(null);
+  };
+
+  const formatDateTime = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const formattedDate = date.toLocaleDateString();
+    const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `${formattedDate}, ${formattedTime}`;
   };
 
   return (
@@ -84,11 +87,11 @@ export default function Scanning() {
           {result.valid ? (
             <CheckCircle2 size={120} className="mb-4 opacity-90 animate-bounce" />
           ) : (
-            <XCircle size={120} className="mb-4 opacity-90" />
+            <XCircle size={120} className="mb-4 opacity-90 animate-pulse" />
           )}
           
           <h2 className="text-5xl font-extrabold mb-6 uppercase tracking-wider">
-            {result.valid ? 'APPROVED' : 'DENIED'}
+            {result.valid ? 'APPROVED' : result.reason}
           </h2>
 
           {result.name && result.name !== 'Unknown' && (
@@ -106,13 +109,29 @@ export default function Scanning() {
               </div>
               <div className="bg-black/20 p-4 rounded-xl flex justify-between items-center">
                 <span className="opacity-90 font-medium">Expires</span>
-                <span className="font-bold">{result.validUntil !== 'Never' ? new Date(result.validUntil).toLocaleDateString() : 'Never'}</span>
+                <span className="font-bold">{result.validUntil ? formatDateTime(result.validUntil) : 'Never'}</span>
               </div>
             </div>
           ) : (
-            <p className="text-2xl font-bold uppercase max-w-sm bg-black/20 p-6 rounded-2xl w-full">
-              {result.reason}
-            </p>
+            <div className="space-y-3 w-full max-w-sm">
+              {result.reason === 'Not Valid Yet' && result.validFrom && (
+                <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center">
+                  <span className="opacity-80 text-sm uppercase tracking-wider mb-1">Valid From</span>
+                  <span className="font-bold text-xl">{formatDateTime(result.validFrom)}</span>
+                </div>
+              )}
+              {result.reason === 'Expired' && result.validUntil && (
+                <div className="bg-black/20 p-4 rounded-xl flex flex-col items-center">
+                  <span className="opacity-80 text-sm uppercase tracking-wider mb-1">Expired</span>
+                  <span className="font-bold text-xl">{formatDateTime(result.validUntil)}</span>
+                </div>
+              )}
+              {result.reason === 'Not on system' && (
+                <div className="bg-black/20 p-4 rounded-xl">
+                  <p className="opacity-90 font-medium">Code is not registered in Firebase.</p>
+                </div>
+              )}
+            </div>
           )}
 
           <button 
