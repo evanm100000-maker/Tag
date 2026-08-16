@@ -9,8 +9,8 @@ const firebaseConfig = {
   messagingSenderId: "836114316053",
   appId: "1:836114316053:web:6387403de12a3c49fd871c",
   measurementId: "G-HGYGDMLY70",
-  // Added the standard Realtime Database URL format for this project ID
-  databaseURL: "https://tagscanner-f9c49-default-rtdb.firebaseio.com"
+  // Correct database URL for Europe region
+  databaseURL: "https://tagscanner-f9c49-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
 const app = initializeApp(firebaseConfig);
