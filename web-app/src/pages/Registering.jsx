@@ -1,40 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import { saveTag } from '../utils/db';
-import QRCode from 'react-qr-code';
+import QRCode from 'qrcode';
 
 export default function Registering() {
   const [mode, setMode] = useState('select'); // 'select' | 'scan' | 'generate'
   const [status, setStatus] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
   
-  // Dates
+  // Registration Data
+  const [name, setName] = useState('');
   const [validFrom, setValidFrom] = useState('');
   const [validUntil, setValidUntil] = useState('');
+  
+  // Generation
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
 
   useEffect(() => {
-    let html5QrCode;
+    let html5QrcodeScanner;
 
     if (mode === 'scan') {
-      html5QrCode = new Html5Qrcode("register-reader");
-      
-      html5QrCode.start(
-        { facingMode: "environment" },
+      html5QrcodeScanner = new Html5QrcodeScanner(
+        "register-reader",
         { fps: 10, qrbox: { width: 250, height: 250 } },
+        false
+      );
+      
+      html5QrcodeScanner.render(
         async (decodedText) => {
-          html5QrCode.stop().catch(console.error);
+          html5QrcodeScanner.clear();
           await handleRegister(decodedText);
         },
-        () => {}
-      ).catch(err => {
-        console.error('Error starting scanner', err);
-        setStatus('Could not start camera');
-      });
+        (error) => {}
+      );
     }
 
     return () => {
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().catch(console.error);
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().catch(console.error);
       }
     };
   }, [mode]);
@@ -42,9 +45,16 @@ export default function Registering() {
   const generateRandomCode = () => Math.random().toString(36).substring(2, 10).toUpperCase();
 
   const handleRegister = async (code) => {
+    if (!name.trim()) {
+      setStatus('Error: Name is required.');
+      setMode('select');
+      return;
+    }
+
     await saveTag({ 
       code, 
       type: 'barcode', 
+      name: name.trim(),
       disabled: false,
       validFrom: validFrom ? new Date(validFrom).toISOString() : null,
       validUntil: validUntil ? new Date(validUntil).toISOString() : null
@@ -52,14 +62,24 @@ export default function Registering() {
     
     if (mode === 'generate') {
       setGeneratedCode(code);
+      const url = await QRCode.toDataURL(code, { width: 300, margin: 2 });
+      setQrCodeDataUrl(url);
       setStatus(`Successfully Generated & Registered!`);
     } else {
-      setStatus(`Successfully Registered scanned barcode!\nCode: ${code}`);
+      setStatus(`Successfully Registered scanned barcode for ${name}!\nCode: ${code}`);
       setMode('select');
+      setName('');
+      setValidFrom('');
+      setValidUntil('');
     }
   };
 
   const onGenerateClick = async () => {
+    if (!name.trim()) {
+      setStatus('Error: You must enter a name first.');
+      return;
+    }
+    setMode('generate');
     const code = generateRandomCode();
     await handleRegister(code);
   };
@@ -74,14 +94,25 @@ export default function Registering() {
         </div>
       )}
 
-      {/* Date Configuration - Only show when selecting */}
       {(mode === 'select' || (mode === 'generate' && !generatedCode)) && (
         <div className="w-full bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-8">
+          
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-600 mb-1">Holder's Name (Required)</label>
+            <input 
+              type="text" 
+              placeholder="e.g. John Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-lg p-3 outline-none focus:border-blue-500 transition font-medium"
+            />
+          </div>
+
           <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Validity Rules (Optional)</h3>
           
           <div className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1">Starts Working (Date & Time)</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1">Starts Working</label>
               <input 
                 type="datetime-local" 
                 value={validFrom}
@@ -91,7 +122,7 @@ export default function Registering() {
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1">Stops Working (Date & Time)</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1">Stops Working</label>
               <input 
                 type="datetime-local" 
                 value={validUntil}
@@ -106,18 +137,18 @@ export default function Registering() {
       {mode === 'select' && (
         <div className="flex flex-col gap-4 w-full">
           <button 
-            onClick={() => { setStatus(''); setMode('scan'); }}
+            onClick={() => { 
+              if (!name.trim()) return setStatus('Error: Name is required.');
+              setStatus(''); 
+              setMode('scan'); 
+            }}
             className="bg-green-600 text-white py-5 rounded-xl font-bold text-xl hover:bg-green-700 transition shadow-md"
           >
             Scan Existing Barcode
           </button>
           
           <button 
-            onClick={() => {
-              setStatus('');
-              setMode('generate');
-              onGenerateClick();
-            }}
+            onClick={onGenerateClick}
             className="bg-blue-600 text-white py-5 rounded-xl font-bold text-xl hover:bg-blue-700 transition shadow-md"
           >
             Generate New Barcode
@@ -127,7 +158,7 @@ export default function Registering() {
 
       {mode === 'scan' && (
         <div className="w-full flex flex-col items-center">
-          <div className="w-full overflow-hidden rounded-2xl shadow-lg border-4 border-gray-200 mb-6 bg-black min-h-[300px]" id="register-reader">
+          <div className="w-full overflow-hidden rounded-2xl shadow-lg border-2 border-gray-200 mb-6 bg-white min-h-[300px]" id="register-reader">
           </div>
           <button 
             onClick={() => setMode('select')}
@@ -138,18 +169,32 @@ export default function Registering() {
         </div>
       )}
 
-      {mode === 'generate' && generatedCode && (
+      {mode === 'generate' && generatedCode && qrCodeDataUrl && (
         <div className="w-full flex flex-col items-center bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
-          <div className="bg-white p-4 border-4 border-gray-100 rounded-2xl mb-6">
-            <QRCode value={generatedCode} size={200} />
+          <div className="bg-white p-2 border-4 border-gray-100 rounded-2xl mb-4">
+            <img src={qrCodeDataUrl} alt="Generated QR Code" className="w-48 h-48" />
           </div>
+          <p className="text-sm text-gray-500 mb-2">Long-press image to save, or click below</p>
+          
+          <a 
+            href={qrCodeDataUrl}
+            download={`Barcode-${name}.png`}
+            className="bg-green-600 text-white font-bold px-6 py-3 rounded-lg mb-6 w-full text-center"
+          >
+            Save to Photos
+          </a>
+
           <p className="text-2xl font-mono font-bold tracking-widest text-gray-800 mb-8">{generatedCode}</p>
           
           <button 
             onClick={() => {
               setMode('select');
               setGeneratedCode('');
+              setQrCodeDataUrl('');
               setStatus('');
+              setName('');
+              setValidFrom('');
+              setValidUntil('');
             }}
             className="bg-gray-100 text-gray-700 font-bold px-8 py-3 rounded-xl hover:bg-gray-200 transition w-full"
           >

@@ -102,7 +102,12 @@ export const validateEntry = async (code) => {
       scanCountToday: newCount
     });
 
-    return { valid: true, scanCountToday: newCount };
+    return { 
+      valid: true, 
+      scanCountToday: newCount,
+      name: tag.name || 'Unknown',
+      validUntil: tag.validUntil || 'Never'
+    };
   } catch (error) {
     console.error('Error validating', error);
     return { valid: false, reason: 'Database Error' };
