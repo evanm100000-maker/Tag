@@ -1,25 +1,36 @@
-const DB_KEY = 'tagscanner_tags';
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc, updateDoc } from "firebase/firestore";
 
-export const getAllTags = () => {
+const firebaseConfig = {
+  apiKey: "AIzaSyBu8Zjk-ed-HNm8_trZbIJcNz_i1eKP4vU",
+  authDomain: "tagscanner-f9c49.firebaseapp.com",
+  projectId: "tagscanner-f9c49",
+  storageBucket: "tagscanner-f9c49.firebasestorage.app",
+  messagingSenderId: "836114316053",
+  appId: "1:836114316053:web:6387403de12a3c49fd871c",
+  measurementId: "G-HGYGDMLY70"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+export const getAllTags = async () => {
   try {
-    const data = localStorage.getItem(DB_KEY);
-    return data ? JSON.parse(data) : [];
+    const querySnapshot = await getDocs(collection(db, "tags"));
+    const tags = [];
+    querySnapshot.forEach((doc) => {
+      tags.push(doc.data());
+    });
+    return tags;
   } catch (err) {
     console.error('Error reading tags', err);
     return [];
   }
 };
 
-export const saveTag = (tag) => {
+export const saveTag = async (tag) => {
   try {
-    const tags = getAllTags();
-    const existingIndex = tags.findIndex((t) => t.code === tag.code);
-    if (existingIndex >= 0) {
-      tags[existingIndex] = tag;
-    } else {
-      tags.push(tag);
-    }
-    localStorage.setItem(DB_KEY, JSON.stringify(tags));
+    await setDoc(doc(db, "tags", tag.code), tag);
     return true;
   } catch (err) {
     console.error('Error saving tag', err);
@@ -27,11 +38,9 @@ export const saveTag = (tag) => {
   }
 };
 
-export const removeTag = (code) => {
+export const removeTag = async (code) => {
   try {
-    const tags = getAllTags();
-    const newTags = tags.filter((t) => t.code !== code);
-    localStorage.setItem(DB_KEY, JSON.stringify(newTags));
+    await deleteDoc(doc(db, "tags", code));
     return true;
   } catch (err) {
     console.error('Error removing tag', err);
@@ -39,14 +48,9 @@ export const removeTag = (code) => {
   }
 };
 
-export const disableTag = (code, disabled) => {
+export const disableTag = async (code, disabled) => {
   try {
-    const tags = getAllTags();
-    const tag = tags.find((t) => t.code === code);
-    if (tag) {
-      tag.disabled = disabled;
-      localStorage.setItem(DB_KEY, JSON.stringify(tags));
-    }
+    await updateDoc(doc(db, "tags", code), { disabled });
     return true;
   } catch (err) {
     console.error('Error disabling tag', err);
@@ -54,18 +58,23 @@ export const disableTag = (code, disabled) => {
   }
 };
 
-export const validateEntry = (code) => {
-  const tags = getAllTags();
-  const tag = tags.find((t) => t.code === code);
+export const validateEntry = async (code) => {
+  try {
+    const docRef = doc(db, "tags", code);
+    const docSnap = await getDoc(docRef);
 
-  if (!tag) {
-    return { valid: false, reason: 'Code not found in system' };
+    if (!docSnap.exists()) {
+      return { valid: false, reason: 'Code not found in system' };
+    }
+
+    const tag = docSnap.data();
+    if (tag.disabled) {
+      return { valid: false, reason: 'Tag has been disabled by admin' };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    console.error('Error validating', error);
+    return { valid: false, reason: 'Error connecting to database' };
   }
-
-  if (tag.disabled) {
-    return { valid: false, reason: 'Tag has been disabled by admin' };
-  }
-
-  // We can add expiry logic back if needed, but requirements didn't mention it this time.
-  return { valid: true };
 };

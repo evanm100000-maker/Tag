@@ -37,8 +37,8 @@ export default function Registering() {
 
   const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  const handleRegister = (code, type) => {
-    saveTag({ code, type, disabled: false });
+  const handleRegister = async (code, type) => {
+    await saveTag({ code, type, disabled: false });
     setStatus(`Successfully registered ${type.toUpperCase()}!\nCode: ${code}`);
     setMode('select');
   };

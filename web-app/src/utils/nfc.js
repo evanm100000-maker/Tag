@@ -12,9 +12,15 @@ export const readNfc = async () => {
     return new Promise((resolve, reject) => {
       ndef.addEventListener("reading", ({ message, serialNumber }) => {
         try {
-          // Find text record
           for (const record of message.records) {
-            if (record.recordType === "text") {
+            if (record.recordType === "url") {
+              const textDecoder = new TextDecoder(record.encoding);
+              const url = textDecoder.decode(record.data);
+              // Extract the code from the end of the URL (e.g., https://.../scan/CODE)
+              const code = url.split('/').pop();
+              resolve(code);
+              return;
+            } else if (record.recordType === "text") {
               const textDecoder = new TextDecoder(record.encoding);
               const text = textDecoder.decode(record.data);
               resolve(text);
@@ -41,8 +47,10 @@ export const writeNfc = async (code) => {
 
   try {
     const ndef = new window.NDEFReader();
+    // Build the URL for the deep link
+    const url = window.location.origin + '/scan/' + code;
     await ndef.write({
-      records: [{ recordType: "text", data: code }]
+      records: [{ recordType: "url", data: url }]
     });
     return { success: true };
   } catch (error) {

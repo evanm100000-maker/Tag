@@ -40,11 +40,11 @@ export default function Scanning() {
     };
   }, [mode, result]);
 
-  const handleCode = (code) => {
+  const handleCode = async (code) => {
     if (scannerRef.current && scannerRef.current.isScanning) {
       scannerRef.current.stop().catch(console.error);
     }
-    const validation = validateEntry(code);
+    const validation = await validateEntry(code);
     setResult(validation);
   };
 

@@ -6,9 +6,13 @@ export default function Admin() {
   const [password, setPassword] = useState('');
   const [tags, setTags] = useState([]);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const loadTags = () => {
-    setTags(getAllTags());
+  const loadTags = async () => {
+    setLoading(true);
+    const data = await getAllTags();
+    setTags(data);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -27,15 +31,15 @@ export default function Admin() {
     }
   };
 
-  const handleRemove = (code) => {
+  const handleRemove = async (code) => {
     if (window.confirm('Are you sure you want to completely remove this tag?')) {
-      removeTag(code);
+      await removeTag(code);
       loadTags();
     }
   };
 
-  const handleToggleDisable = (code, currentDisabled) => {
-    disableTag(code, !currentDisabled);
+  const handleToggleDisable = async (code, currentDisabled) => {
+    await disableTag(code, !currentDisabled);
     loadTags();
   };
 
@@ -76,7 +80,9 @@ export default function Admin() {
       </div>
 
       <div className="grid gap-4">
-        {tags.length === 0 ? (
+        {loading ? (
+          <p className="text-gray-500 text-center py-8">Loading tags...</p>
+        ) : tags.length === 0 ? (
           <p className="text-gray-500 text-center py-8">No tags registered yet.</p>
         ) : (
           tags.map((tag) => (

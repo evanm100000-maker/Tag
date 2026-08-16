@@ -6,6 +6,8 @@ import Scanning from './pages/Scanning';
 import Registering from './pages/Registering';
 import Admin from './pages/Admin';
 
+import DirectScan from './pages/DirectScan';
+
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,7 +21,7 @@ const Header = () => {
         <span className="font-semibold text-lg">Back</span>
       </button>
       <h1 className="ml-4 text-xl font-bold capitalize">
-        {location.pathname.substring(1)}
+        {location.pathname.split('/')[1] || ''}
       </h1>
     </div>
   );
@@ -36,6 +38,7 @@ function App() {
             <Route path="/scanning" element={<Scanning />} />
             <Route path="/registering" element={<Registering />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/scan/:code" element={<DirectScan />} />
           </Routes>
         </main>
       </div>
