@@ -1,46 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import React, { useState } from 'react';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { validateEntry } from '../utils/db';
 
 export default function Scanning() {
   const [result, setResult] = useState(null); // { valid: boolean, reason?: string, scanCountToday?: number, name?: string, validUntil?: string }
   
-  useEffect(() => {
-    let html5QrcodeScanner;
-
-    if (!result) {
-      html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false
-      );
-      
-      html5QrcodeScanner.render(
-        async (decodedText) => {
-          // Stop immediately upon scan
-          html5QrcodeScanner.clear();
-          const validation = await validateEntry(decodedText);
-          setResult(validation);
-        },
-        (error) => {
-          // Ignore
-        }
-      );
+  const handleScan = async (codes) => {
+    if (codes && codes.length > 0 && !result) {
+      const decodedText = codes[0].rawValue;
+      const validation = await validateEntry(decodedText);
+      setResult(validation);
     }
-
-    return () => {
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear().catch(console.error);
-      }
-    };
-  }, [result]);
+  };
 
   return (
     <div className="relative h-full flex flex-col bg-gray-50">
       {!result ? (
         <div className="flex-1 w-full flex flex-col items-center p-4">
-          <div id="reader" className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden"></div>
+          <div className="w-full max-w-md mx-auto bg-black rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden relative">
+            <Scanner 
+              onScan={handleScan}
+              formats={['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39']}
+              components={{
+                audio: false,
+                onOff: false,
+                torch: false,
+                zoom: false,
+                finder: true,
+              }}
+              styles={{
+                container: { width: '100%', height: '100%' }
+              }}
+            />
+          </div>
         </div>
       ) : (
         <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center p-6 text-white text-center ${result.valid ? 'bg-green-600' : 'bg-red-600'}`}>
@@ -54,7 +47,7 @@ export default function Scanning() {
             {result.valid ? 'APPROVED' : 'DENIED'}
           </h2>
 
-          {result.name && (
+          {result.name && result.name !== 'Unknown' && (
             <div className="bg-black/20 px-6 py-3 rounded-2xl mb-6 border border-white/20">
               <p className="text-sm uppercase tracking-widest opacity-80 mb-1">Holder</p>
               <p className="text-2xl font-bold">{result.name}</p>

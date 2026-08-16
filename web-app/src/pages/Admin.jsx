@@ -89,6 +89,7 @@ export default function Admin() {
             <div key={tag.code} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <p className="font-bold text-lg text-gray-800">{tag.code}</p>
+                <p className="text-sm font-semibold text-gray-500 mb-1">{tag.name || 'Unknown'}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs font-semibold bg-gray-100 text-gray-600 px-2 py-1 rounded uppercase">
                     {tag.type}

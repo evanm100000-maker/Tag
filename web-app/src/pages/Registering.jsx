@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import React, { useState } from 'react';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { saveTag } from '../utils/db';
 import QRCode from 'qrcode';
 
@@ -15,32 +15,6 @@ export default function Registering() {
   // Generation
   const [generatedCode, setGeneratedCode] = useState('');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
-
-  useEffect(() => {
-    let html5QrcodeScanner;
-
-    if (mode === 'scan') {
-      html5QrcodeScanner = new Html5QrcodeScanner(
-        "register-reader",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false
-      );
-      
-      html5QrcodeScanner.render(
-        async (decodedText) => {
-          html5QrcodeScanner.clear();
-          await handleRegister(decodedText);
-        },
-        (error) => {}
-      );
-    }
-
-    return () => {
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear().catch(console.error);
-      }
-    };
-  }, [mode]);
 
   const generateRandomCode = () => Math.random().toString(36).substring(2, 10).toUpperCase();
 
@@ -71,6 +45,12 @@ export default function Registering() {
       setName('');
       setValidFrom('');
       setValidUntil('');
+    }
+  };
+
+  const handleScan = async (codes) => {
+    if (codes && codes.length > 0) {
+      await handleRegister(codes[0].rawValue);
     }
   };
 
@@ -158,11 +138,22 @@ export default function Registering() {
 
       {mode === 'scan' && (
         <div className="w-full flex flex-col items-center">
-          <div className="w-full overflow-hidden rounded-2xl shadow-lg border-2 border-gray-200 mb-6 bg-white min-h-[300px]" id="register-reader">
+          <div className="w-full max-w-md mx-auto bg-black rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden mb-6">
+            <Scanner 
+              onScan={handleScan}
+              formats={['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39']}
+              components={{
+                audio: false,
+                onOff: false,
+                torch: false,
+                zoom: false,
+                finder: true,
+              }}
+            />
           </div>
           <button 
             onClick={() => setMode('select')}
-            className="text-red-500 font-bold px-6 py-3 border-2 border-red-500 rounded-xl hover:bg-red-50 transition w-full"
+            className="text-red-500 font-bold px-6 py-3 border-2 border-red-500 rounded-xl hover:bg-red-50 transition w-full max-w-xs"
           >
             Cancel
           </button>
@@ -196,7 +187,7 @@ export default function Registering() {
               setValidFrom('');
               setValidUntil('');
             }}
-            className="bg-gray-100 text-gray-700 font-bold px-8 py-3 rounded-xl hover:bg-gray-200 transition w-full"
+            className="bg-gray-100 text-gray-700 font-bold px-8 py-3 rounded-xl hover:bg-gray-200 transition w-full max-w-xs"
           >
             Done
           </button>
