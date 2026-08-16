@@ -31,10 +31,10 @@ export const getAllTags = async () => {
 export const saveTag = async (tag) => {
   try {
     await setDoc(doc(db, "tags", tag.code), tag);
-    return true;
+    return { success: true };
   } catch (err) {
     console.error('Error saving tag', err);
-    return false;
+    return { success: false, error: err.message };
   }
 };
 
@@ -110,6 +110,6 @@ export const validateEntry = async (code) => {
     };
   } catch (error) {
     console.error('Error validating', error);
-    return { valid: false, reason: 'Database Error' };
+    return { valid: false, reason: error.message ? `DB Error: ${error.message}` : 'Database Error' };
   }
 };

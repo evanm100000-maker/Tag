@@ -25,7 +25,7 @@ export default function Registering() {
       return;
     }
 
-    await saveTag({ 
+    const saveResult = await saveTag({ 
       code, 
       type: 'barcode', 
       name: name.trim(),
@@ -33,6 +33,12 @@ export default function Registering() {
       validFrom: validFrom ? new Date(validFrom).toISOString() : null,
       validUntil: validUntil ? new Date(validUntil).toISOString() : null
     });
+
+    if (!saveResult.success) {
+      setStatus(`Error saving to database: ${saveResult.error || 'Unknown error'}`);
+      setMode('select');
+      return;
+    }
     
     if (mode === 'generate') {
       setGeneratedCode(code);
