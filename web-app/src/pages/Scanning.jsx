@@ -23,12 +23,19 @@ export default function Scanning() {
     // Reset to blue/default when scanning
     if (!result) {
       setThemeColor('#3b82f6'); // blue
+      document.documentElement.style.backgroundColor = '#f9fafb'; // bg-gray-50
+      document.body.style.backgroundColor = '#f9fafb';
     } else {
-      setThemeColor(result.valid ? '#16a34a' : '#dc2626'); // green or red
+      const color = result.valid ? '#16a34a' : '#dc2626'; // green or red
+      setThemeColor(color);
+      document.documentElement.style.backgroundColor = color;
+      document.body.style.backgroundColor = color;
     }
     
     return () => {
       setThemeColor('#3b82f6'); // Reset on unmount
+      document.documentElement.style.backgroundColor = '';
+      document.body.style.backgroundColor = '';
     };
   }, [result]);
 
