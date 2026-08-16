@@ -64,17 +64,47 @@ export const validateEntry = async (code) => {
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
-      return { valid: false, reason: 'Code not found in system' };
+      return { valid: false, reason: 'Not Registered' };
     }
 
     const tag = docSnap.data();
+    
     if (tag.disabled) {
-      return { valid: false, reason: 'Tag has been disabled by admin' };
+      return { valid: false, reason: 'Tag has been disabled' };
     }
 
-    return { valid: true };
+    const now = new Date();
+    
+    if (tag.validFrom) {
+      const from = new Date(tag.validFrom);
+      if (now < from) {
+        return { valid: false, reason: 'Not Valid Yet' };
+      }
+    }
+    
+    if (tag.validUntil) {
+      const until = new Date(tag.validUntil);
+      if (now > until) {
+        return { valid: false, reason: 'OUT OF DATE' };
+      }
+    }
+
+    // Update scan count
+    const todayStr = now.toISOString().split('T')[0];
+    let newCount = 1;
+    
+    if (tag.lastScannedDate === todayStr) {
+      newCount = (tag.scanCountToday || 0) + 1;
+    }
+
+    await updateDoc(docRef, {
+      lastScannedDate: todayStr,
+      scanCountToday: newCount
+    });
+
+    return { valid: true, scanCountToday: newCount };
   } catch (error) {
     console.error('Error validating', error);
-    return { valid: false, reason: 'Error connecting to database' };
+    return { valid: false, reason: 'Database Error' };
   }
 };
