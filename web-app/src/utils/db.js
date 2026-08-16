@@ -66,7 +66,7 @@ export const validateEntry = async (code) => {
     const snapshot = await get(child(dbRef, `tags/${code}`));
 
     if (!snapshot.exists()) {
-      return { valid: false, reason: 'Not Registered' };
+      return { valid: false, reason: 'Not on system' };
     }
 
     const tag = snapshot.val();
@@ -87,7 +87,9 @@ export const validateEntry = async (code) => {
     if (tag.validUntil) {
       const until = new Date(tag.validUntil);
       if (now > until) {
-        return { valid: false, reason: 'OUT OF DATE' };
+        const formattedDate = until.toLocaleDateString();
+        const formattedTime = until.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return { valid: false, reason: `EXPIRED ON: ${formattedDate}, ${formattedTime}` };
       }
     }
 
