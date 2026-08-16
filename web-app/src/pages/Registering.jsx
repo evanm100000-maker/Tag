@@ -48,9 +48,13 @@ export default function Registering() {
     }
   };
 
+  const isProcessing = React.useRef(false);
+
   const handleScan = async (codes) => {
-    if (codes && codes.length > 0) {
+    if (codes && codes.length > 0 && !isProcessing.current) {
+      isProcessing.current = true;
       await handleRegister(codes[0].rawValue);
+      isProcessing.current = false;
     }
   };
 

@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { validateEntry } from '../utils/db';
 
 export default function Scanning() {
   const [result, setResult] = useState(null); // { valid: boolean, reason?: string, scanCountToday?: number, name?: string, validUntil?: string }
+  const isProcessing = useRef(false);
   
   const handleScan = async (codes) => {
-    if (codes && codes.length > 0 && !result) {
+    if (codes && codes.length > 0 && !result && !isProcessing.current) {
+      isProcessing.current = true;
       const decodedText = codes[0].rawValue;
       const validation = await validateEntry(decodedText);
       setResult(validation);
+      isProcessing.current = false;
     }
   };
 
@@ -36,7 +39,7 @@ export default function Scanning() {
           </div>
         </div>
       ) : (
-        <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center p-6 text-white text-center ${result.valid ? 'bg-green-600' : 'bg-red-600'}`}>
+        <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center p-6 text-white text-center ${result.valid ? 'bg-green-600' : 'bg-red-600'}`}>
           {result.valid ? (
             <CheckCircle2 size={120} className="mb-4 opacity-90" />
           ) : (
