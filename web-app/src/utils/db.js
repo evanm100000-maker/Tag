@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { getDatabase, ref, set, get, child, remove, update } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBu8Zjk-ed-HNm8_trZbIJcNz_i1eKP4vU",
@@ -8,20 +8,22 @@ const firebaseConfig = {
   storageBucket: "tagscanner-f9c49.firebasestorage.app",
   messagingSenderId: "836114316053",
   appId: "1:836114316053:web:6387403de12a3c49fd871c",
-  measurementId: "G-HGYGDMLY70"
+  measurementId: "G-HGYGDMLY70",
+  // Added the standard Realtime Database URL format for this project ID
+  databaseURL: "https://tagscanner-f9c49-default-rtdb.firebaseio.com"
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = getDatabase(app);
 
 export const getAllTags = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, "tags"));
-    const tags = [];
-    querySnapshot.forEach((doc) => {
-      tags.push(doc.data());
-    });
-    return tags;
+    const snapshot = await get(ref(db, "tags"));
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      return Object.values(data);
+    }
+    return [];
   } catch (err) {
     console.error('Error reading tags', err);
     return [];
@@ -30,7 +32,7 @@ export const getAllTags = async () => {
 
 export const saveTag = async (tag) => {
   try {
-    await setDoc(doc(db, "tags", tag.code), tag);
+    await set(ref(db, "tags/" + tag.code), tag);
     return { success: true };
   } catch (err) {
     console.error('Error saving tag', err);
@@ -40,7 +42,7 @@ export const saveTag = async (tag) => {
 
 export const removeTag = async (code) => {
   try {
-    await deleteDoc(doc(db, "tags", code));
+    await remove(ref(db, "tags/" + code));
     return true;
   } catch (err) {
     console.error('Error removing tag', err);
@@ -50,7 +52,7 @@ export const removeTag = async (code) => {
 
 export const disableTag = async (code, disabled) => {
   try {
-    await updateDoc(doc(db, "tags", code), { disabled });
+    await update(ref(db, "tags/" + code), { disabled });
     return true;
   } catch (err) {
     console.error('Error disabling tag', err);
@@ -60,14 +62,14 @@ export const disableTag = async (code, disabled) => {
 
 export const validateEntry = async (code) => {
   try {
-    const docRef = doc(db, "tags", code);
-    const docSnap = await getDoc(docRef);
+    const dbRef = ref(db);
+    const snapshot = await get(child(dbRef, `tags/${code}`));
 
-    if (!docSnap.exists()) {
+    if (!snapshot.exists()) {
       return { valid: false, reason: 'Not Registered' };
     }
 
-    const tag = docSnap.data();
+    const tag = snapshot.val();
     
     if (tag.disabled) {
       return { valid: false, reason: 'Tag has been disabled' };
@@ -97,7 +99,7 @@ export const validateEntry = async (code) => {
       newCount = (tag.scanCountToday || 0) + 1;
     }
 
-    await updateDoc(docRef, {
+    await update(ref(db, `tags/${code}`), {
       lastScannedDate: todayStr,
       scanCountToday: newCount
     });
