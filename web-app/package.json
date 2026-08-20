@@ -12,6 +12,8 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@yudiel/react-qr-scanner": "^2.6.0",
+    "bcryptjs": "^3.0.3",
+    "crypto-js": "^4.2.0",
     "firebase": "^12.17.1",
     "lucide-react": "^1.31.0",
     "qrcode": "^1.5.4",
